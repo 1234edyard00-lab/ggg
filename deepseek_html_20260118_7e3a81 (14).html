@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Брутальная Гонка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            touch-action: pan-y;
+        }
+        
+        body {
+            background-color: #111;
+            font-family: 'Arial Black', sans-serif;
+            overflow: hidden;
+            color: #ff3300;
+            text-shadow: 2px 2px 0 #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        #header {
+            text-align: center;
+            font-size: 24px;
+            padding: 15px;
+            background: linear-gradient(to bottom, #222, #000);
+            border-bottom: 3px solid #ff3300;
+            letter-spacing: 2px;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(255, 51, 0, 0.3);
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            height: 70vh;
+            min-height: 500px;
+            margin: 10px auto;
+            overflow: hidden;
+            background: #1a1a1a;
+            border: 3px solid #ff3300;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 51, 0, 0.4);
+        }
+        
+        #road {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #222;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .lane {
+            width: calc(100% / 3);
+            height: 100%;
+            border-right: 2px solid #ffcc00;
+            position: relative;
+        }
+        
+        .lane:last-child {
+            border-right: none;
+        }
+        
+        #car {
+            position: absolute;
+            width: 30px;
+            height: 50px;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+            border-radius: 5px 5px 0 0;
+            z-index: 10;
+            box-shadow: 0 3px 10px rgba(255, 0, 0, 0.6);
+            transition: left 0.15s ease-out;
+        }
+        
+        #car::before {
+            content: '';
+            position: absolute;
+            width: 35px;
+            height: 15px;
+            background: #222;
+            top: -10px;
+            left: -2.5px;
+            border-radius: 3px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.7);
+        }
+        
+        #car::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, #ff9900, #ff3300);
+            top: 8px;
+            left: -15px;
+            border-radius: 50%;
+            box-shadow: 
+                45px 0 0 radial-gradient(circle, #ff9900, #ff3300),
+                0 25px 0 #222,
+                45px 25px 0 #222;
+        }
+        
+        .car-window {
+            position: absolute;
+            width: 25px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.7);
+            top: 5px;
+            left: 2.5px;
+            border-radius: 3px;
+        }
+        
+        .obstacle {
+            position: absolute;
+            width: 70px;
+            height: 60px;
+            background: linear-gradient(135deg, #222, #000);
+            border: 2px solid #ff3300;
+            border-radius: 6px;
+            z-index: 5;
+            box-shadow: 0 0 15px rgba(255,51,0,0.9);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .obstacle-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .obstacle-fallback {
+            font-size: 32px;
+            color: #ff3300;
+            text-shadow: 0 0 10px rgba(255,51,0,0.9);
+        }
+        
+        .coin {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: radial-gradient(circle at 30% 30%, #FFD700, #FFA500);
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 0 20px #FFD700;
+            animation: spin 1.5s linear infinite;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .coin::before {
+            content: '$';
+            position: absolute;
+            color: #8B7500;
+            font-weight: bold;
+            font-size: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes spin {
+            0% { transform: translateX(-50%) rotateY(0); }
+            100% { transform: translateX(-50%) rotateY(360deg); }
+        }
+        
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            z-index: 100;
+            font-size: 16px;
+            color: #ffcc00;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 2px solid #ff3300;
+            box-shadow: 0 0 15px rgba(0,0,0,0.9);
+        }
+        
+        .hud-item {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .hud-label {
+            font-size: 12px;
+            color: #ff9900;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .hud-value {
+            font-size: 20px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.98);
+            padding: 20px;
+            border: 4px solid #ff3300;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            color: #ff3300;
+            font-size: 22px;
+            width: 90%;
+            max-width: 300px;
+            box-shadow: 0 0 50px rgba(255, 51, 0, 0.9);
+        }
+        
+        #gameOver h2 {
+            color: #ff0000;
+            font-size: 28px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.9);
+        }
+        
+        .fail-message {
+            color: #ff9900;
+            font-size: 24px;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 51, 0, 0.1);
+            border-radius: 8px;
+            border: 2px solid #ff3300;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .crash-photo-container {
+            margin: 20px 0;
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 51, 0, 0.05);
+            border-radius: 10px;
+            border: 2px dashed #ff3300;
+        }
+        
+        .crash-photo-label {
+            color: #ff9900;
+            font-size: 18px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .crash-photo {
+            width: 180px;  /* Было 120px - увеличение в 1.5 раза */
+            height: 150px; /* Было 100px - увеличение в 1.5 раза */
+            object-fit: cover;
+            border: 4px solid #ff3300;
+            border-radius: 10px;
+            margin: 0 auto;
+            display: block;
+            box-shadow: 0 0 30px rgba(255, 51, 0, 0.8);
+        }
+        
+        .crash-photo-fallback {
+            width: 180px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #222;
+            border: 4px solid #ff3300;
+            border-radius: 10px;
+            margin: 0 auto;
+            font-size: 60px;
+            color: #ff3300;
+            box-shadow: 0 0 30px rgba(255, 51, 0, 0.8);
+        }
+        
+        .result-item {
+            margin: 8px 0;
+            font-size: 18px;
+            color: #ffcc00;
+        }
+        
+        .result-value {
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        #restartBtn {
+            background: linear-gradient(to bottom, #ff3300, #8B0000);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-family: 'Arial Black', sans-serif;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(255, 51, 0, 0.6);
+        }
+        
+        #restartBtn:hover {
+            background: linear-gradient(to bottom, #ff5500, #a52a2a);
+            transform: scale(1.05);
+            box-shadow: 0 7px 25px rgba(255, 51, 0, 0.8);
+        }
+        
+        #controls {
+            text-align: center;
+            color: #ff9900;
+            font-size: 14px;
+            padding: 15px;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 10px;
+            background: rgba(34, 34, 34, 0.9);
+            border-radius: 10px;
+            border: 1px solid #ff3300;
+        }
+        
+        .swipe-instruction {
+            font-size: 16px;
+            color: #ffcc00;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .game-tip {
+            font-size: 12px;
+            color: #ccc;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        
+        .lane-indicator {
+            position: absolute;
+            bottom: 130px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 20;
+        }
+        
+        .lane-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+            transition: all 0.3s;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .lane-dot.active {
+            background: #ff3300;
+            box-shadow: 0 0 10px #ff3300;
+            transform: scale(1.3);
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            70% { transform: translate(-50%, -50%) scale(0.9); }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        
+        #soundControl {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 51, 0, 0.8);
+            border: 2px solid #ff9900;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: white;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+        
+        #soundControl:hover {
+            background: rgba(255, 51, 0, 1);
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 153, 0, 0.7);
+        }
+        
+        #soundControl.muted {
+            background: rgba(100, 100, 100, 0.8);
+            border-color: #666;
+        }
+        
+        #photoInfo {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #ffcc00;
+            z-index: 100;
+            border: 1px solid #ff3300;
+        }
+        
+        #debugInfo {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #ffcc00;
+            z-index: 100;
+            border: 1px solid #ff3300;
+            max-width: 200px;
+            display: none;
+        }
+        
+        .debug-toggle {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(255, 51, 0, 0.8);
+            border: 2px solid #ff9900;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: white;
+            z-index: 100;
+        }
+        
+        /* Анимация увеличения фото */
+        @keyframes photoZoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .crash-photo, .crash-photo-fallback {
+            animation: photoZoom 0.7s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">Эдо придумал :)</div>
+    
+    <div id="gameContainer">
+        <div id="road">
+            <div class="lane" id="lane1"></div>
+            <div class="lane" id="lane2"></div>
+            <div class="lane" id="lane3"></div>
+        </div>
+        <div id="car">
+            <div class="car-window"></div>
+        </div>
+        
+        <div class="lane-indicator">
+            <div class="lane-dot" id="dot1"></div>
+            <div class="lane-dot" id="dot2"></div>
+            <div class="lane-dot" id="dot3"></div>
+        </div>
+        
+        <div id="soundControl">🔊</div>
+        <div id="photoInfo">Фото: <span id="loadedPhotos">0</span>/25</div>
+        <div class="debug-toggle" id="debugToggle">🔍</div>
+        <div id="debugInfo">
+            <strong>Отладка фото:</strong><br>
+            <div id="debugLog"></div>
+        </div>
+        
+        <div id="hud">
+            <div class="hud-item">
+                <div class="hud-label">Монеты</div>
+                <div class="hud-value" id="coinCount">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Дистанция</div>
+                <div class="hud-value" id="distance">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Скорость</div>
+                <div class="hud-value" id="speed">25</div>
+            </div>
+        </div>
+        
+        <div id="gameOver">
+            <h2>ПРОИГРЫШ!</h2>
+            <div class="fail-message">ДАВАЙ, ПОШЕЛ ТРЕНИРОВАТЬСЯ!</div>
+            
+            <div class="crash-photo-container">
+                <div class="crash-photo-label">ВСТРЕТИЛСЯ С:</div>
+                <img id="crashPhoto" class="crash-photo" style="display: none;">
+                <div id="crashPhotoFallback" class="crash-photo-fallback" style="display: none;">⚠</div>
+            </div>
+            
+            <div class="result-item">Монеты: <span class="result-value" id="finalCoins">0</span></div>
+            <div class="result-item">Дистанция: <span class="result-value" id="finalDistance">0</span> м</div>
+            <button id="restartBtn">ПОПРОБОВАТЬ СНОВА</button>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <div class="swipe-instruction">Свайпай влево/вправо для смены полосы</div>
+        <div class="game-tip">Больше расстояние между препятствиями - можно объехать!</div>
+        <div class="game-tip">Игра ищет фото: 1, 2, 3... с любыми расширениями</div>
+    </div>
+
+    <script>
+        // Элементы игры
+        const car = document.getElementById('car');
+        const road = document.getElementById('road');
+        const coinCountElement = document.getElementById('coinCount');
+        const distanceElement = document.getElementById('distance');
+        const speedElement = document.getElementById('speed');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalCoinsElement = document.getElementById('finalCoins');
+        const finalDistanceElement = document.getElementById('finalDistance');
+        const restartBtn = document.getElementById('restartBtn');
+        const laneDots = document.querySelectorAll('.lane-dot');
+        const soundControl = document.getElementById('soundControl');
+        const photoInfo = document.getElementById('loadedPhotos');
+        const crashPhoto = document.getElementById('crashPhoto');
+        const crashPhotoFallback = document.getElementById('crashPhotoFallback');
+        const debugToggle = document.getElementById('debugToggle');
+        const debugInfo = document.getElementById('debugInfo');
+        const debugLog = document.getElementById('debugLog');
+        
+        // ВСЕ ВОЗМОЖНЫЕ ВАРИАНТЫ РАСШИРЕНИЙ
+        const extensions = [
+            '',           // Без расширения: "1", "2"...
+            '.jpg',       // С .jpg
+            '.jpeg',      // С .jpeg
+            '.png',       // С .png
+            '.webp',      // С .webp
+            '.gif',       // С .gif
+            '.bmp',       // С .bmp
+            '.JPG',       // С заглавными буквами
+            '.JPEG',
+            '.PNG',
+            '.WEBP',
+            '.GIF',
+            '.BMP'
+        ];
+        
+        // Массив для загруженных фото
+        let loadedPhotos = [];
+        let lastCrashPhotoSrc = null;
+        let lastCrashPhotoName = null;
+        
+        // Игровые переменные
+        let currentLane = 1;
+        let coins = 0;
+        let distance = 0;
+        let speed = 25; // В 2 раза медленнее
+        let gameActive = true;
+        let obstacles = [];
+        let coinsArray = [];
+        let gameLoop;
+        let obstacleTimer;
+        let coinTimer;
+        let speedTimer;
+        let lastSwipeTime = 0;
+        const swipeCooldown = 150;
+        let soundsEnabled = true;
+        let audioContext;
+        
+        // Ограничитель количества препятствий на экране
+        const MAX_ON_SCREEN_OBSTACLES = 3;
+        
+        // Минимальное расстояние между препятствиями (в пикселях)
+        const MIN_OBSTACLE_DISTANCE = 250; // Было ~180, теперь больше
+        
+        // Время с момента создания последнего препятствия
+        let lastObstacleTime = 0;
+        
+        // Функция для добавления сообщения в отладку
+        function addDebugMessage(message) {
+            const now = new Date();
+            const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            debugLog.innerHTML = `<div>[${time}] ${message}</div>` + debugLog.innerHTML;
+        }
+        
+        // Переключение отладки
+        debugToggle.addEventListener('click', function() {
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        // Функция загрузки фото со ВСЕМИ вариантами расширений
+        async function loadPhotos() {
+            loadedPhotos = [];
+            let checkedFiles = 0;
+            let foundFiles = 0;
+            
+            addDebugMessage("🚀 Начинаю поиск фото...");
+            photoInfo.textContent = "Поиск...";
+            
+            // Проверяем файлы от 1 до 25
+            for (let fileNumber = 1; fileNumber <= 25; fileNumber++) {
+                let fileFound = false;
+                
+                // Пробуем каждое расширение для этого номера
+                for (const ext of extensions) {
+                    const filename = `${fileNumber}${ext}`;
+                    checkedFiles++;
+                    
+                    try {
+                        const exists = await checkFileExists(filename);
+                        
+                        if (exists) {
+                            foundFiles++;
+                            loadedPhotos.push({
+                                filename: filename,
+                                src: filename,
+                                loaded: true,
+                                number: fileNumber
+                            });
+                            
+                            addDebugMessage(`✅ Найдено: ${filename}`);
+                            fileFound = true;
+                            break; // Нашли файл, переходим к следующему номеру
+                        }
+                    } catch (error) {
+                        // Пропускаем ошибки, продолжаем проверять
+                    }
+                }
+                
+                if (!fileFound) {
+                    addDebugMessage(`❌ Не найден файл номер ${fileNumber}`);
+                }
+                
+                // Обновляем информацию каждые 5 файлов
+                if (fileNumber % 5 === 0) {
+                    photoInfo.textContent = `Проверено: ${fileNumber}/25`;
+                }
+                
+                // Небольшая пауза между проверками
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            // Итоговое сообщение
+            photoInfo.textContent = `${foundFiles}/25`;
+            
+            if (foundFiles > 0) {
+                addDebugMessage(`🎉 Загружено ${foundFiles} фото из ${checkedFiles} проверенных вариантов`);
+                
+                // Сортируем фото по номеру для удобства
+                loadedPhotos.sort((a, b) => a.number - b.number);
+                
+                // Показываем список найденных файлов
+                let fileList = "Найденные файлы:<br>";
+                loadedPhotos.forEach(photo => {
+                    fileList += `• ${photo.filename}<br>`;
+                });
+                addDebugMessage(fileList);
+            } else {
+                addDebugMessage("😞 Фото не найдены. Возможные причины:");
+                addDebugMessage("1. Файлы не в той же папке, что и игра");
+                addDebugMessage("2. Файлы названы не 1, 2, 3...");
+                addDebugMessage("3. Файлы повреждены или не изображения");
+            }
+        }
+        
+        // Функция проверки существования файла
+        function checkFileExists(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    addDebugMessage(`✓ ${url} (${img.width}x${img.height})`);
+                    resolve(true);
+                };
+                img.onerror = () => resolve(false);
+                img.src = url;
+                
+                // Таймаут 500ms
+                setTimeout(() => resolve(false), 500);
+            });
+        }
+        
+        // Получить случайное загруженное фото
+        function getRandomPhoto() {
+            if (loadedPhotos.length === 0) {
+                return null;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * loadedPhotos.length);
+            return loadedPhotos[randomIndex];
+        }
+        
+        // Показать фото при проигрыше
+        function showCrashPhoto(photoSrc, photoName) {
+            if (photoSrc) {
+                crashPhoto.src = photoSrc;
+                crashPhoto.style.display = 'block';
+                crashPhotoFallback.style.display = 'none';
+                
+                // Обновляем заголовок с именем файла
+                document.querySelector('.crash-photo-label').textContent = 
+                    `ВСТРЕТИЛСЯ С: ${photoName || 'фото'}`;
+            } else {
+                crashPhoto.style.display = 'none';
+                crashPhotoFallback.style.display = 'flex';
+                document.querySelector('.crash-photo-label').textContent = 'ВСТРЕТИЛСЯ С: ⚠';
+            }
+        }
+        
+        // Функция для получения случайных непересекающихся полос
+        function getRandomLanes() {
+            // Всегда оставляем как минимум 1 свободную полосу из 3
+            // Варианты: 0-1, 0-2, 1-2, 0, 1, 2
+            const patterns = [
+                [0],      // Только левая полоса
+                [1],      // Только центральная полоса
+                [2],      // Только правая полоса
+                [0, 1],   // Левая и центральная
+                [1, 2],   // Центральная и правая
+                [0, 2]    // Левая и правая (свободна центральная)
+            ];
+            
+            // Выбираем случайный паттерн
+            const randomPattern = patterns[Math.floor(Math.random() * patterns.length)];
+            
+            // Если выпал паттерн с одной полосой, иногда добавляем вторую (с шансом 30%)
+            if (randomPattern.length === 1 && Math.random() < 0.3) {
+                const singleLane = randomPattern[0];
+                if (singleLane === 0) {
+                    // Если занята левая, добавляем либо центральную, либо правую
+                    return Math.random() < 0.5 ? [0, 1] : [0, 2];
+                } else if (singleLane === 1) {
+                    // Если занята центральная, добавляем либо левую, либо правую
+                    return Math.random() < 0.5 ? [0, 1] : [1, 2];
+                } else if (singleLane === 2) {
+                    // Если занята правая, добавляем либо левую, либо центральную
+                    return Math.random() < 0.5 ? [0, 2] : [1, 2];
+                }
+            }
+            
+            return randomPattern;
+        }
+        
+        // Проверка минимального расстояния между препятствиями
+        function checkMinDistance() {
+            if (obstacles.length === 0) return true;
+            
+            // Находим самое нижнее препятствие
+            let lowestObstacle = obstacles[0];
+            for (const obs of obstacles) {
+                if (obs.y > lowestObstacle.y) {
+                    lowestObstacle = obs;
+                }
+            }
+            
+            // Проверяем расстояние от нижнего края препятствия до верхней части экрана
+            const distanceToTop = Math.abs(lowestObstacle.y - (-80));
+            
+            // Если препятствие слишком близко к верху, ждем
+            return distanceToTop > MIN_OBSTACLE_DISTANCE;
+        }
+        
+        // Инициализация игры
+        async function initGame() {
+            currentLane = 1;
+            coins = 0;
+            distance = 0;
+            speed = 25; // В 2 раза медленнее
+            gameActive = true;
+            obstacles = [];
+            coinsArray = [];
+            lastSwipeTime = 0;
+            lastCrashPhotoSrc = null;
+            lastCrashPhotoName = null;
+            lastObstacleTime = Date.now();
+            
+            updateCarPosition();
+            updateLaneIndicator();
+            coinCountElement.textContent = coins;
+            distanceElement.textContent = distance;
+            speedElement.textContent = speed;
+            
+            gameOverScreen.style.display = 'none';
+            
+            // Очистка объектов
+            document.querySelectorAll('.obstacle').forEach(o => o.remove());
+            document.querySelectorAll('.coin').forEach(c => c.remove());
+            
+            // Сброс стилей машины
+            car.style.background = 'linear-gradient(45deg, #ff0000, #cc0000)';
+            car.style.boxShadow = '0 3px 10px rgba(255, 0, 0, 0.6)';
+            car.style.transform = 'translateX(-50%) scale(1)';
+            
+            // Остановка таймеров
+            if (gameLoop) clearInterval(gameLoop);
+            if (obstacleTimer) clearInterval(obstacleTimer);
+            if (coinTimer) clearInterval(coinTimer);
+            if (speedTimer) clearInterval(speedTimer);
+            
+            // Загрузка фото
+            addDebugMessage("🔄 Начинаю новую игру...");
+            await loadPhotos();
+            
+            startGame();
+        }
+        
+        // Управление звуками
+        soundControl.addEventListener('click', function() {
+            soundsEnabled = !soundsEnabled;
+            
+            if (soundsEnabled) {
+                this.classList.remove('muted');
+                this.innerHTML = '🔊';
+                if (!audioContext) {
+                    initAudioContext();
+                }
+            } else {
+                this.classList.add('muted');
+                this.innerHTML = '🔇';
+            }
+        });
+        
+        // Инициализация аудио контекста
+        function initAudioContext() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            } catch (e) {
+                soundsEnabled = false;
+                soundControl.classList.add('muted');
+                soundControl.innerHTML = '🔇';
+            }
+        }
+        
+        // Автозапуск звукового контекста при первом клике
+        document.addEventListener('click', function initAudio() {
+            if (soundsEnabled && !audioContext) {
+                initAudioContext();
+            }
+        }, { once: true });
+        
+        // Воспроизведение звука монетки
+        function playCoinSound() {
+            if (!soundsEnabled || !audioContext) return;
+            
+            try {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.15);
+                
+            } catch (e) {
+                // Игнорируем ошибки звука
+            }
+        }
+        
+        // Воспроизведение звука аварии
+        function playCrashSound() {
+            if (!soundsEnabled || !audioContext) return;
+            
+            try {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(180, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(60, audioContext.currentTime + 0.6);
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.6);
+                
+            } catch (e) {
+                // Игнорируем ошибки звука
+            }
+        }
+        
+        // Позиционирование машины
+        function updateCarPosition() {
+            const roadWidth = road.offsetWidth;
+            const laneWidth = roadWidth / 3;
+            const carPosition = (laneWidth / 2) + (currentLane * laneWidth);
+            car.style.left = carPosition + 'px';
+        }
+        
+        // Обновление индикатора полосы
+        function updateLaneIndicator() {
+            laneDots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentLane);
+            });
+        }
+        
+        // Запуск игрового процесса
+        function startGame() {
+            if (loadedPhotos.length === 0) {
+                addDebugMessage("⚠ Игра запущена без фото. Будут использоваться эмодзи.");
+            }
+            
+            gameLoop = setInterval(updateGame, 50);
+            obstacleTimer = setInterval(createObstacle, 2200); // ЕЩЕ МЕДЛЕННЕЕ - 2.2 секунды
+            coinTimer = setInterval(createCoin, 1200); // Медленнее создание монет
+            speedTimer = setInterval(increaseSpeed, 3000); // Медленнее увеличение скорости
+        }
+        
+        // Основной игровой цикл
+        function updateGame() {
+            if (!gameActive) return;
+            
+            distance += speed / 160; // В 2 раза медленнее прирост дистанции
+            distanceElement.textContent = Math.floor(distance);
+            
+            updateObstacles();
+            updateCoins();
+            checkCollisions();
+        }
+        
+        // Создание препятствий - МЕНЬШЕ и С БОЛЬШИМ РАССТОЯНИЕМ
+        function createObstacle() {
+            if (!gameActive) return;
+            
+            // Проверяем, не слишком ли много препятствий на экране
+            if (obstacles.length >= MAX_ON_SCREEN_OBSTACLES) {
+                addDebugMessage("⚠ Слишком много препятствий, пропускаю создание");
+                return;
+            }
+            
+            // Шанс создать препятствие - 60% (было 70%)
+            if (Math.random() > 0.6) {
+                return;
+            }
+            
+            // Проверяем минимальное расстояние между препятствиями
+            if (!checkMinDistance()) {
+                addDebugMessage("⚠ Слишком близко к предыдущему препятствию, жду...");
+                return;
+            }
+            
+            // Проверяем время с момента создания последнего препятствия
+            const now = Date.now();
+            const timeSinceLastObstacle = now - lastObstacleTime;
+            if (timeSinceLastObstacle < 1500) { // Минимум 1.5 секунды между препятствиями
+                return;
+            }
+            
+            // Получаем полосы для препятствий (всегда оставляем свободную полосу)
+            const lanes = getRandomLanes();
+            
+            // Создаем препятствия на выбранных полосах
+            lanes.forEach(laneIndex => {
+                createSingleObstacle(laneIndex);
+            });
+            
+            lastObstacleTime = now;
+            addDebugMessage(`🛑 Созданы препятствия на полосах: ${lanes.join(', ')} (расстояние >${MIN_OBSTACLE_DISTANCE}px)`);
+        }
+        
+        function createSingleObstacle(laneIndex) {
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            
+            const roadWidth = road.offsetWidth;
+            const laneWidth = roadWidth / 3;
+            const obstaclePosition = (laneWidth / 2) + (laneIndex * laneWidth);
+            
+            obstacle.style.left = obstaclePosition + 'px';
+            obstacle.style.top = '-80px';
+            
+            const randomPhoto = getRandomPhoto();
+            
+            if (randomPhoto && loadedPhotos.length > 0) {
+                const imgElement = document.createElement('img');
+                imgElement.className = 'obstacle-photo';
+                imgElement.src = randomPhoto.src;
+                imgElement.alt = randomPhoto.filename;
+                imgElement.dataset.photoSrc = randomPhoto.src;
+                obstacle.appendChild(imgElement);
+                
+                obstacles.push({
+                    element: obstacle,
+                    lane: laneIndex,
+                    y: -80,
+                    width: 70,
+                    height: 60,
+                    photoSrc: randomPhoto.src,
+                    photoName: randomPhoto.filename
+                });
+            } else {
+                const fallbackElement = document.createElement('div');
+                fallbackElement.className = 'obstacle-fallback';
+                fallbackElement.textContent = '⚠';
+                obstacle.appendChild(fallbackElement);
+                
+                obstacles.push({
+                    element: obstacle,
+                    lane: laneIndex,
+                    y: -80,
+                    width: 70,
+                    height: 60,
+                    photoSrc: null,
+                    photoName: null
+                });
+            }
+            
+            road.appendChild(obstacle);
+        }
+        
+        // Создание монет
+        function createCoin() {
+            if (!gameActive || Math.random() < 0.5) return; // Меньше монет
+            
+            const laneIndex = Math.floor(Math.random() * 3);
+            const coin = document.createElement('div');
+            coin.className = 'coin';
+            
+            const roadWidth = road.offsetWidth;
+            const laneWidth = roadWidth / 3;
+            const coinPosition = (laneWidth / 2) + (laneIndex * laneWidth);
+            
+            coin.style.left = coinPosition + 'px';
+            coin.style.top = '-40px';
+            
+            road.appendChild(coin);
+            coinsArray.push({
+                element: coin,
+                lane: laneIndex,
+                y: -40,
+                width: 35,
+                height: 35
+            });
+        }
+        
+        // Обновление препятствий - В 2 РАЗА МЕДЛЕННЕЕ!
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += speed / 12; // Было /6, стало /12 (в 2 раза медленнее)
+                obs.element.style.top = obs.y + 'px';
+                
+                if (obs.y > road.offsetHeight) {
+                    obs.element.remove();
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Обновление монет - В 2 РАЗА МЕДЛЕННЕЕ!
+        function updateCoins() {
+            for (let i = coinsArray.length - 1; i >= 0; i--) {
+                const coin = coinsArray[i];
+                coin.y += speed / 12; // Было /6, стало /12 (в 2 раза медленнее)
+                coin.element.style.top = coin.y + 'px';
+                
+                if (coin.y > road.offsetHeight) {
+                    coin.element.remove();
+                    coinsArray.splice(i, 1);
+                }
+            }
+        }
+        
+        // Проверка столкновений
+        function checkCollisions() {
+            const carRect = {
+                lane: currentLane,
+                x: parseFloat(car.style.left) - 15,
+                y: road.offsetHeight - 120,
+                width: 30,
+                height: 50
+            };
+            
+            for (const obs of obstacles) {
+                if (obs.lane === carRect.lane) {
+                    const obsRect = {
+                        x: parseFloat(obs.element.style.left) - 35,
+                        y: obs.y,
+                        width: 70,
+                        height: 60
+                    };
+                    
+                    if (detectCollision(carRect, obsRect)) {
+                        lastCrashPhotoSrc = obs.photoSrc;
+                        lastCrashPhotoName = obs.photoName;
+                        if (obs.photoName) {
+                            addDebugMessage(`💥 Врезался в: ${obs.photoName} (полоса ${obs.lane + 1})`);
+                        }
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+            
+            for (let i = coinsArray.length - 1; i >= 0; i--) {
+                const coin = coinsArray[i];
+                if (coin.lane === carRect.lane) {
+                    const coinRect = {
+                        x: parseFloat(coin.element.style.left) - 17.5,
+                        y: coin.y,
+                        width: 35,
+                        height: 35
+                    };
+                    
+                    if (detectCollision(carRect, coinRect)) {
+                        coins++;
+                        coinCountElement.textContent = coins;
+                        coin.element.remove();
+                        coinsArray.splice(i, 1);
+                        
+                        playCoinSound();
+                        
+                        car.style.boxShadow = '0 0 25px rgba(255, 215, 0, 1)';
+                        setTimeout(() => {
+                            car.style.boxShadow = '0 3px 10px rgba(255, 0, 0, 0.6)';
+                        }, 150);
+                    }
+                }
+            }
+        }
+        
+        // Функция обнаружения столкновений
+        function detectCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // Увеличение скорости - МЕДЛЕННЕЕ!
+        function increaseSpeed() {
+            if (!gameActive) return;
+            speed = Math.min(speed + 2, 60); // Было +3 до 120, стало +2 до 60
+            speedElement.textContent = speed;
+        }
+        
+        // Конец игры
+        function gameOver() {
+            gameActive = false;
+            clearInterval(gameLoop);
+            clearInterval(obstacleTimer);
+            clearInterval(coinTimer);
+            clearInterval(speedTimer);
+            
+            finalCoinsElement.textContent = coins;
+            finalDistanceElement.textContent = Math.floor(distance);
+            
+            // Воспроизведение звука аварии
+            playCrashSound();
+            
+            // Эффект взрыва
+            car.style.background = 'linear-gradient(45deg, #ff3300, #ff0000)';
+            car.style.boxShadow = '0 0 40px rgba(255, 0, 0, 0.9)';
+            car.style.transform = 'translateX(-50%) scale(1.1)';
+            
+            // Показываем фото при проигрыше (БОЛЬШЕГО РАЗМЕРА)
+            setTimeout(() => {
+                showCrashPhoto(lastCrashPhotoSrc, lastCrashPhotoName);
+                
+                // Показываем сообщение с задержкой
+                setTimeout(() => {
+                    gameOverScreen.style.display = 'block';
+                    gameOverScreen.style.animation = 'bounceIn 0.5s';
+                }, 300);
+            }, 200);
+        }
+        
+        // Управление свайпами
+        let touchStartX = 0;
+        const minSwipeDistance = 40;
+        
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            if (!gameActive) return;
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const diffX = touchEndX - touchStartX;
+            
+            if (Math.abs(diffX) > minSwipeDistance) {
+                const currentTime = Date.now();
+                if (currentTime - lastSwipeTime > swipeCooldown) {
+                    lastSwipeTime = currentTime;
+                    
+                    if (diffX > 0 && currentLane < 2) {
+                        currentLane++;
+                        updateCarPosition();
+                        updateLaneIndicator();
+                    } else if (diffX < 0 && currentLane > 0) {
+                        currentLane--;
+                        updateCarPosition();
+                        updateLaneIndicator();
+                    }
+                }
+            }
+        });
+        
+        // Управление с клавиатуры
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            const currentTime = Date.now();
+            if (currentTime - lastSwipeTime > swipeCooldown) {
+                lastSwipeTime = currentTime;
+                
+                if ((e.key === 'ArrowLeft' || e.key === 'a') && currentLane > 0) {
+                    currentLane--;
+                    updateCarPosition();
+                    updateLaneIndicator();
+                } else if ((e.key === 'ArrowRight' || e.key === 'd') && currentLane < 2) {
+                    currentLane++;
+                    updateCarPosition();
+                    updateLaneIndicator();
+                }
+            }
+        });
+        
+        // Кнопка рестарта
+        restartBtn.addEventListener('click', initGame);
+        
+        // Загрузка игры
+        window.addEventListener('load', () => {
+            initGame();
+            setTimeout(updateCarPosition, 100);
+        });
+        
+        window.addEventListener('resize', updateCarPosition);
+    </script>
+</body>
+</html>
